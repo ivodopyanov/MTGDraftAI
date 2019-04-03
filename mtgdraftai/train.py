@@ -54,7 +54,7 @@ def load_data(train_config):
                         else:
                             original_pack_pos = (player_pos+pick_num)%(len(draft_json['player_names']))
                         pick_pos = draft_json['picks'][pack_num][player_pos][pick_num] - 1
-                        if not bot and len([card_id for card_id in draft_json['packs'][pack_num][original_pack_pos] if card_id!=0]) > 5 and draft_json['packs'][pack_num][original_pack_pos][pick_pos]!=0:
+                        if not bot and draft_json['packs'][pack_num][original_pack_pos][pick_pos]!=0:
                             sample = dict(pack=draft_json['packs'][pack_num][original_pack_pos][:],
                                           picks=picked[player_pos].tolist(),
                                           choice=pick_pos)
