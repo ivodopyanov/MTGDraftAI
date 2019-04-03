@@ -28,7 +28,7 @@ def train():
         model = Model(sess, model_config)
         model.build()
         sess.run(tf.global_variables_initializer())
-        run_train(model, train_data, test_data, train_config)
+        run_train(model, sess, train_data, test_data, train_config)
 
 
 def load_data(train_config):
@@ -81,37 +81,36 @@ def encode_data(data, card_vocab_encode):
     return data
 
 
-def run_train(model, train_data, test_data, train_config):
-    with tf.Session() as sess:
-        saver = tf.train.Saver(sess.graph._collections['variables'])
-        best_acc = 0
-        for epoch_num in range(999):
-            sys.stdout.write("\nEpoch {}\nTraining\n".format(epoch_num))
-            losses = []
-            for batch_num in range(len(train_data) // train_config['batch_size']):
-                picks = [sample['picks'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                packs = [sample['pack'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                choice = [sample['choice'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                loss = model.train(packs, picks, choice, train_config['dropout'], train_config['lr'])
-                losses.append(loss)
-                if batch_num%10 == 0:
-                    sys.stdout.write("\r{}/{} loss={:.4f}     ".format(batch_num*train_config['batch_size'], len(train_data), np.mean(losses)))
-            sys.stdout.write("\nTesting\n")
-            losses = []
-            accs = []
-            for batch_num in range(len(test_data) // train_config['batch_size']):
-                picks = [sample['picks'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                packs = [sample['pack'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                choice = [sample['choice'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-                loss, acc = model.evaluate(packs, picks, choice)
-                losses.append(loss)
-                accs.append(acc)
-                if batch_num%10 == 0:
-                    sys.stdout.write("\r{}/{} loss={:.4f} acc={:.4f}     ".format(batch_num*train_config['batch_size'], len(test_data), np.mean(losses), np.mean(accs)))
-            if np.mean(accs) > best_acc:
-                best_acc = np.mean(accs)
-                sys.stdout.write("\nSaving best model acc = {:.4f}\n".format(best_acc))
-                saver.save(sess, os.path.join(train_config['output_dir'],"transformer_model"))
+def run_train(model, sess, train_data, test_data, train_config):
+    saver = tf.train.Saver(sess.graph._collections['variables'])
+    best_acc = 0
+    for epoch_num in range(999):
+        sys.stdout.write("\nEpoch {}\nTraining\n".format(epoch_num))
+        losses = []
+        for batch_num in range(len(train_data) // train_config['batch_size']):
+            picks = [sample['picks'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            packs = [sample['pack'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            choice = [sample['choice'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            loss = model.train(packs, picks, choice, train_config['dropout'], train_config['lr'])
+            losses.append(loss)
+            if batch_num%10 == 0:
+                sys.stdout.write("\r{}/{} loss={:.4f}     ".format(batch_num*train_config['batch_size'], len(train_data), np.mean(losses)))
+        sys.stdout.write("\nTesting\n")
+        losses = []
+        accs = []
+        for batch_num in range(len(test_data) // train_config['batch_size']):
+            picks = [sample['picks'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            packs = [sample['pack'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            choice = [sample['choice'] for sample in test_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
+            loss, acc = model.evaluate(packs, picks, choice)
+            losses.append(loss)
+            accs.append(acc)
+            if batch_num%10 == 0:
+                sys.stdout.write("\r{}/{} loss={:.4f} acc={:.4f}     ".format(batch_num*train_config['batch_size'], len(test_data), np.mean(losses), np.mean(accs)))
+        if np.mean(accs) > best_acc:
+            best_acc = np.mean(accs)
+            sys.stdout.write("\nSaving best model acc = {:.4f}\n".format(best_acc))
+            saver.save(sess, os.path.join(train_config['output_dir'],"transformer_model"))
 
 if __name__ == "__main__":
     train()

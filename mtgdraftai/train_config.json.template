@@ -3,7 +3,7 @@
   "output_dir":"",
   "pack_size": 15,
   "train_test_split": 0.8,
-  "batch_size": 16,
-  "dropout": 0.8,
+  "batch_size": 256,
+  "dropout": 0.9,
   "lr": 1e-3
 }
