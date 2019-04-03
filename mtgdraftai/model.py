@@ -51,7 +51,7 @@ class Model(object):
                                    initializer=tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
                                    shape=[1, 1, self.config['emb_dim']])
 
-        mask = tf.cast(tf.equal(tf.concat([pack, picks], axis=-1), 0), dtype=tf.float32)
+        mask = tf.cast(tf.not_equal(tf.concat([pack, picks], axis=-1), 0), dtype=tf.float32)
         pack_embedded = tf.nn.embedding_lookup(embeddings_var, pack, name="embeddings") + pack_var
         picks_embedded = tf.nn.embedding_lookup(embeddings_var, picks, name="embeddings") + picks_var
         x = tf.concat([pack_embedded, picks_embedded], axis=-2)
