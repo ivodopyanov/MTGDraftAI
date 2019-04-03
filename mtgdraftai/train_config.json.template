@@ -1,6 +1,6 @@
 {
-  "source_dir":"/home/ivodopyanov/MTG/drafts_dataset",
-  "output_dir":"/home/ivodopyanov/MTG/training_result",
+  "source_dir":"",
+  "output_dir":"",
   "pack_size": 15,
   "train_test_split": 0.8,
   "batch_size": 16,
