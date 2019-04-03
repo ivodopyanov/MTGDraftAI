@@ -74,7 +74,7 @@ def load_data(train_config):
 
 def encode_data(data, card_vocab_encode):
     for sample_id, sample in enumerate(data):
-        if sample_id%100 == 0:
+        if sample_id%1000 == 0:
             sys.stdout.write("\r{} / {}     ".format(sample_id, len(data)))
         sample['picks'] = [card_vocab_encode[card] for card in sample['picks']]
         sample['pack'] = [card_vocab_encode[card] for card in sample['pack']]
@@ -91,9 +91,9 @@ def run_train(model, sess, train_data, test_data, train_config):
             picks = [sample['picks'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
             packs = [sample['pack'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
             choice = [sample['choice'] for sample in train_data[train_config['batch_size']*batch_num:train_config['batch_size']*(batch_num+1)]]
-            loss = model.train(packs, picks, choice, train_config['dropout'], train_config['lr'])
+            loss = model.train(packs, picks, choice, train_config['dropout'], train_config['lr'], train_config['wd'])
             losses.append(loss)
-            if batch_num%10 == 0:
+            if batch_num%100 == 0:
                 sys.stdout.write("\r{}/{} loss={:.4f}     ".format(batch_num*train_config['batch_size'], len(train_data), np.mean(losses)))
         sys.stdout.write("\nTesting\n")
         losses = []
@@ -105,7 +105,7 @@ def run_train(model, sess, train_data, test_data, train_config):
             loss, acc = model.evaluate(packs, picks, choice)
             losses.append(loss)
             accs.append(acc)
-            if batch_num%10 == 0:
+            if batch_num%100 == 0:
                 sys.stdout.write("\r{}/{} loss={:.4f} acc={:.4f}     ".format(batch_num*train_config['batch_size'], len(test_data), np.mean(losses), np.mean(accs)))
         if np.mean(accs) > best_acc:
             best_acc = np.mean(accs)

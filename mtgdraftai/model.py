@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from math import pi, sqrt
-
+from tensorflow.contrib.opt.python.training.weight_decay_optimizers import AdamWOptimizer
 
 EPS = 1e-12
 
@@ -11,20 +11,18 @@ class Model(object):
         self.config = config
 
     def build_trainer(self):
-        packs = tf.placeholder(tf.int32, shape=[None, None], name="packs")
+        pack = tf.placeholder(tf.int32, shape=[None, None], name="packs")
         picks = tf.placeholder(tf.int32, shape=[None, None], name="picks")
-
-
 
         dropout = tf.placeholder(dtype=tf.float32, shape=[], name="dropout")
         lr = tf.placeholder(dtype=tf.float32, shape=[], name="lr")
+        wd = tf.placeholder(dtype=tf.float32, shape=[], name="wd")
 
-        total_cards = tf.concat([packs, picks], axis=-1)
-        final_embeddings = self.transformer(total_cards, dropout)
-        final_embeddings = final_embeddings[:,:tf.shape(packs)[1]]
+        final_embeddings = self.transformer(pack, picks, dropout)
+        final_embeddings = final_embeddings[:,:tf.shape(pack)[1]]
         total_scores = tf.layers.Dense(1, name="q")(final_embeddings)
         total_scores = tf.reduce_sum(total_scores, axis=-1)
-        total_scores = tf.where(tf.equal(packs, 0), tf.ones_like(total_scores)*(-1e10), total_scores)
+        total_scores = tf.where(tf.equal(pack, 0), tf.ones_like(total_scores)*(-1e10), total_scores)
 
         chosen_cards = tf.cast(tf.argmax(total_scores, axis=-1), tf.int32, name="chosen_cards")
         scores_pred = tf.identity(total_scores, name="scores_pred")
@@ -34,20 +32,29 @@ class Model(object):
         loss = tf.reduce_mean(loss, name="loss")
 
 
-        optimizer = tf.train.AdamOptimizer(lr)
+        optimizer = AdamWOptimizer(weight_decay=wd, learning_rate=lr)
         self.gradients = optimizer.compute_gradients(loss)
         train_op = optimizer.apply_gradients(self.gradients, name="train_op")
         #self.check = tf.add_check_numerics_ops()
 
-    def transformer(self, total_cards, dropout):
-
-        mask = tf.cast(tf.equal(total_cards, 0), dtype=tf.float32)
+    def transformer(self, pack, picks, dropout):
         embeddings_var = tf.get_variable(name="embeddings_var",
                                                dtype=tf.float32,
                                                initializer=tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
                                                shape=[self.config['cards_count'], self.config['emb_dim']])
-        inputs = tf.nn.embedding_lookup(embeddings_var, total_cards, name="embeddings")
-        x = inputs
+        pack_var = tf.get_variable(name="pack_var",
+                                   dtype=tf.float32,
+                                   initializer=tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
+                                   shape=[1, 1, self.config['emb_dim']])
+        picks_var = tf.get_variable(name="picks_var",
+                                   dtype=tf.float32,
+                                   initializer=tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
+                                   shape=[1, 1, self.config['emb_dim']])
+
+        mask = tf.cast(tf.equal(tf.concat([pack, picks], axis=-1), 0), dtype=tf.float32)
+        pack_embedded = tf.nn.embedding_lookup(embeddings_var, pack, name="embeddings") + pack_var
+        picks_embedded = tf.nn.embedding_lookup(embeddings_var, picks, name="embeddings") + picks_var
+        x = tf.concat([pack_embedded, picks_embedded], axis=-2)
         for i in range(self.config['transformer_layers_num']):
             with tf.variable_scope("layer_{}".format(i)):
                 with tf.variable_scope("self_attention"):
@@ -118,12 +125,13 @@ class Model(object):
             feed[variable._initializer_op.inputs[1]] = weights[idx]
         self.sess.run(ops, feed_dict=feed)
 
-    def train(self, packs, picks, choice, dropout, lr):
+    def train(self, packs, picks, choice, dropout, lr, wd):
         feed_dict = {self.sess.graph.get_tensor_by_name("packs:0"): packs,
                      self.sess.graph.get_tensor_by_name("picks:0"): picks,
                      self.sess.graph.get_tensor_by_name("choice:0"): choice,
                      self.sess.graph.get_tensor_by_name("dropout:0"): dropout,
-                     self.sess.graph.get_tensor_by_name("lr:0"): lr}
+                     self.sess.graph.get_tensor_by_name("lr:0"): lr,
+                     self.sess.graph.get_tensor_by_name("wd:0"): wd}
 
         _, train_loss, scores, choice_pred = self.sess.run([self.sess.graph.get_operation_by_name("train_op"),
                                                             self.sess.graph.get_tensor_by_name("loss:0"),
