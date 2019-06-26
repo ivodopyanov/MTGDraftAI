@@ -1,6 +1,0 @@
-{
-  "emb_dim": 128,
-  "transformer_layers_num": 4,
-  "transformer_num_heads": 4,
-  "transformer_filter_size": 512
-}

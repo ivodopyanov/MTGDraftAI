@@ -1,0 +1,10 @@
+{
+  "emb_dim": 64,
+  "dropout": 0.75,
+  "split": 0.8,
+  "batch_size": 8,
+  "lr": 0.001,
+  "progbar_label_count": 3,
+  "transformer_layers_num": 4,
+  "transformer_filter_size": 64
+}
